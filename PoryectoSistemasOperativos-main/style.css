@@ -1,0 +1,119 @@
+/* ----------------------------------------------------- */
+/* ** ESTILOS GLOBALES ** */
+/* ----------------------------------------------------- */
+window {
+    background-color: #FFFFFF;
+    font-family: "Sans";
+}
+
+/* ----------------------------------------------------- */
+/* ** LOGIN & REGISTER (Estilo Bershka/Inditex) ** */
+/* ----------------------------------------------------- */
+
+/* Título de la marca en login */
+.login-brand {
+    font-size: 24px;
+    font-weight: 800;
+    color: #000000;
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+}
+
+/* Subtítulos "INICIAR SESIÓN" */
+.login-header {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333333;
+    letter-spacing: 1px;
+}
+
+/* Campos de entrada: Fondo gris claro, sin borde, padding generoso */
+entry.login-input {
+    background-color: #F2F2F2;
+    color: #000000;
+    border: none;
+    border-radius: 0px;
+    padding: 10px 15px;
+    font-size: 14px;
+    min-height: 40px;
+    margin-bottom: 5px;
+}
+
+entry.login-input:focus {
+    background-color: #E6E6E6;
+    border-bottom: 2px solid #000000;
+}
+
+/* Botón Principal (Negro Sólido) */
+button.login-btn-primary {
+    background-color: #000000;
+    color: #FFFFFF;
+    border-radius: 0px;
+    border: none;
+    padding: 12px;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: background-color 0.2s;
+}
+
+button.login-btn-primary:hover {
+    background-color: #333333;
+}
+
+/* Botón Texto (Para cambiar entre login/registro) */
+button.login-btn-text {
+    background: none;
+    border: none;
+    color: #666666;
+    font-size: 11px;
+    text-decoration: underline;
+    box-shadow: none;
+}
+
+button.login-btn-text:hover {
+    color: #000000;
+}
+
+/* Mensajes de error */
+.login-error {
+    color: #D32F2F;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+/* ----------------------------------------------------- */
+/* ** ESTILOS DE NAVEGACIÓN ANTERIORES ** */
+/* ----------------------------------------------------- */
+
+.navbar {
+    background-color: #FFFFFF;
+    padding: 15px 0;
+    border-bottom: 1px solid #E5E5E5;
+}
+
+.nav-button, .menu-nav-button {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    color: #000000;
+    font-weight: bold;
+    font-size: 13px;
+    letter-spacing: 1px;
+}
+
+.nav-button:hover, .menu-nav-button:hover {
+    background-color: #F5F5F5;
+}
+
+.menu-item {
+    padding: 10px 15px;
+    background: #FFFFFF;
+    color: #333333;
+    border: none;
+    font-size: 12px;
+}
+
+.menu-item:hover {
+    background-color: #F2F2F2;
+}
