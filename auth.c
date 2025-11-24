@@ -70,6 +70,54 @@ bool validarLogin(const char *username, const char *password) {
     return false;
 }
 
+
+bool mostrarDatosUsuario(const char *usernameBuscado) {
+    FILE *fp = fopen(ARCHIVO_USUARIOS, "r");
+    if (!fp) {
+        printf("Error al abrir archivo.\n");
+        return false;
+    }
+
+    char linea[512];
+    char copia[512];
+
+    while (fgets(linea, sizeof(linea), fp)) {
+
+        strcpy(copia, linea);  // Copia porque strtok modifica
+        char *token = strtok(copia, ",");
+
+        if (!token) continue;
+
+        if (strcmp(token, usernameBuscado) == 0) {
+            // Coincidió: imprimir todos los campos
+            printf("=== Datos del usuario ===\n");
+
+            char *password      = strtok(NULL, ",");
+            char *telefono      = strtok(NULL, ",");
+            char *estado        = strtok(NULL, ",");
+            char *correo        = strtok(NULL, ",");
+            char *extra1        = strtok(NULL, ",");
+            char *extra2        = strtok(NULL, ",");
+
+            printf("Usuario:   %s\n", token);
+            printf("Password:  %s\n", password);
+            printf("Teléfono:  %s\n", telefono);
+            printf("Estado:    %s\n", estado);
+            printf("Correo:    %s\n", correo);
+            printf("Extra 1:   %s\n", extra1);
+            printf("Extra 2:   %s\n", extra2);
+
+            fclose(fp);
+            return true;
+        }
+    }
+
+    fclose(fp);
+    printf("Usuario '%s' no encontrado.\n", usernameBuscado);
+    return false;
+}
+
+
 // Recuperar TODOS los datos
 bool obtenerDatosUsuarioCompleto(const char *username, char *phone, char *loc, char *email, char *addr, char *card) {
     FILE *fp = fopen(ARCHIVO_USUARIOS, "r");

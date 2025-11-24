@@ -143,26 +143,6 @@ void on_btn_place_order_clicked(GtkWidget *widget, gpointer data) {
     if(type) g_free((gpointer)type);
 }
 
-void on_btn_pagar_clicked(GtkWidget *widget, gpointer data) {
-    GtkWidget *stack = (GtkWidget*)data;
-    GtkWidget *toplevel = gtk_widget_get_toplevel(widget);
-
-    if (carrito_global == NULL) { 
-        mostrar_alerta(toplevel, "YOUR BAG IS EMPTY"); 
-        return; 
-    }
-
-    if (strcmp(current_username, "INVITADO") == 0) {
-        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(toplevel),
-            GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_WARNING, GTK_BUTTONS_OK,
-            "Please SIGN IN or REGISTER to complete your purchase.");
-        gtk_dialog_run(GTK_DIALOG(dialog));
-        gtk_widget_destroy(dialog);
-        gtk_stack_set_visible_child_name(GTK_STACK(stack), "page_login");
-    } else {
-        gtk_stack_set_visible_child_name(GTK_STACK(stack), "page_checkout");
-    }
-}
 
 // ====================================================================
 // CALLBACKS DE BORRADO DE CUENTA
@@ -213,6 +193,96 @@ void on_btn_delete_account_clicked(GtkWidget *widget, gpointer data) {
 // ====================================================================
 // INTERFAZ CHECKOUT (NUEVA PÁGINA A DOS COLUMNAS)
 // ====================================================================
+GtkWidget *global_box_checkout_items = NULL;
+GtkWidget *lbl_total_pay;
+GtkWidget *lbl_total_checkout = NULL;  // Label que mostrará el total en checkout
+
+
+void actualizar_checkout() {
+    // Limpia el contenedor
+    gtk_container_foreach(GTK_CONTAINER(global_box_checkout_items), (GtkCallback)gtk_widget_destroy, NULL);
+
+    NodoCarrito *nodo = carrito_global;
+
+    while (nodo != NULL) {
+
+        // Caja horizontal para cada item
+        GtkWidget *item_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+
+        // IMAGEN
+        GtkWidget *img = NULL;
+        if (nodo->prenda->urlImagen != NULL && strlen(nodo->prenda->urlImagen) > 0) {
+            GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_scale(
+                nodo->prenda->urlImagen,
+                80, 80,
+                TRUE,
+                NULL
+            );
+            if (pixbuf) {
+                img = gtk_image_new_from_pixbuf(pixbuf);
+                g_object_unref(pixbuf);
+            } else {
+                img = gtk_label_new("[Sin imagen]");
+            }
+        } else {
+            img = gtk_label_new("[Sin imagen]");
+        }
+
+        gtk_box_pack_start(GTK_BOX(item_box), img, FALSE, FALSE, 0);
+
+        // NOMBRE + PRECIO
+        char buffer[256];
+        snprintf(buffer, sizeof(buffer), "%s - $%.2f", nodo->prenda->nombre, nodo->prenda->precio);
+        GtkWidget *lbl = gtk_label_new(buffer);
+        gtk_box_pack_start(GTK_BOX(item_box), lbl, FALSE, FALSE, 0);
+
+        gtk_box_pack_start(GTK_BOX(global_box_checkout_items), item_box, FALSE, FALSE, 5);
+
+        nodo = nodo->siguiente;
+    }
+    
+
+    
+    
+    gtk_widget_show_all(global_box_checkout_items);
+
+    
+}
+// Label para mostrar el total del carrito
+
+void on_btn_pagar_clicked(GtkWidget *widget, gpointer data) {
+    GtkWidget *stack = (GtkWidget*)data;
+    GtkWidget *toplevel = gtk_widget_get_toplevel(widget);
+
+    if (carrito_global == NULL) { 
+        mostrar_alerta(toplevel, "YOUR BAG IS EMPTY"); 
+        return; 
+    }
+
+    if (strcmp(current_username, "INVITADO") == 0) {
+        GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(toplevel),
+            GTK_DIALOG_DESTROY_WITH_PARENT, GTK_MESSAGE_WARNING, GTK_BUTTONS_OK,
+            "Please SIGN IN or REGISTER to complete your purchase.");
+        gtk_dialog_run(GTK_DIALOG(dialog));
+        gtk_widget_destroy(dialog);
+        gtk_stack_set_visible_child_name(GTK_STACK(stack), "page_login");
+    } else {
+        
+        actualizar_checkout();
+        // Actualizar el total
+    if (global_lbl_total_carrito) {
+        double total = calcular_total_carrito();
+        char total_str[100];
+        snprintf(total_str, sizeof(total_str), "ESTIMATED TOTAL: $%.2f", total);
+        gtk_label_set_text(GTK_LABEL(global_lbl_total_carrito), total_str);
+    }
+
+        gtk_stack_set_visible_child_name(GTK_STACK(stack), "page_checkout");
+        // IMPORTANTE: LLENAR CON ITEMS DEL CARRITO
+    
+    }
+}
+
 GtkWidget* create_checkout_page(GtkWidget *stack, GtkWidget *window) {
     GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
     gtk_widget_set_size_request(scroll, 900, -1); 
@@ -302,12 +372,21 @@ GtkWidget* create_checkout_page(GtkWidget *stack, GtkWidget *window) {
     GtkWidget *lbl_items = gtk_label_new("Items in Bag");
     gtk_widget_set_halign(lbl_items, GTK_ALIGN_START);
     gtk_box_pack_start(GTK_BOX(col_summary), lbl_items, FALSE, FALSE, 0);
+    global_box_checkout_items = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+gtk_box_pack_start(GTK_BOX(col_summary), global_box_checkout_items, FALSE, FALSE, 5);
+
+
+    
+
 
     double total = calcular_total_carrito(); 
     char total_str[100];
     snprintf(total_str, sizeof(total_str), "TOTAL TO PAY: $%.2f", total);
-    GtkWidget *lbl_total_pay = gtk_label_new(total_str);
+    lbl_total_pay = gtk_label_new(total_str);
     gtk_style_context_add_class(gtk_widget_get_style_context(lbl_total_pay), "cart-total");
+
+
+    
     gtk_box_pack_start(GTK_BOX(col_summary), lbl_total_pay, FALSE, FALSE, 20);
 
     GtkWidget *btn_confirm = gtk_button_new_with_label("PLACE ORDER");
@@ -398,6 +477,86 @@ void cargarDesdeCSV(const char *archivo, ListaRopa *lista) {
     } fclose(f);
 }
 
+
+//Para actulizar page user cada vez que se autentica el usuario
+
+
+GtkWidget *lbl_user_value;
+GtkWidget *lbl_email_value;
+GtkWidget *lbl_phone_value;
+GtkWidget *lbl_location_value;
+GtkWidget *lbl_address_value;
+GtkWidget *lbl_card_value;
+
+GtkWidget* create_user_page(GtkWidget *window, GtkWidget *navbar_auth_area, GtkWidget *stack) {
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+
+    gtk_widget_set_halign(box, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_top(box, 30);
+
+    GtkWidget *lbl_title = gtk_label_new("MY PROFILE");
+    gtk_style_context_add_class(gtk_widget_get_style_context(lbl_title), "auth-title");
+    gtk_box_pack_start(GTK_BOX(box), lbl_title, FALSE, FALSE, 10);
+
+    // -------------------------
+    // USER
+    // -------------------------
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("Current User:"), FALSE, FALSE, 0);
+    lbl_user_value = gtk_label_new(current_username);
+    gtk_box_pack_start(GTK_BOX(box), lbl_user_value, FALSE, FALSE, 0);
+
+    // -------------------------
+    // EMAIL
+    // -------------------------
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("Email:"), FALSE, FALSE, 0);
+    lbl_email_value = gtk_label_new(current_email);
+    gtk_box_pack_start(GTK_BOX(box), lbl_email_value, FALSE, FALSE, 0);
+
+    // -------------------------
+    // PHONE
+    // -------------------------
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("Phone:"), FALSE, FALSE, 0);
+    lbl_phone_value = gtk_label_new(current_phone);
+    gtk_box_pack_start(GTK_BOX(box), lbl_phone_value, FALSE, FALSE, 0);
+
+    // -------------------------
+    // LOCATION
+    // -------------------------
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("Location (State):"), FALSE, FALSE, 0);
+    lbl_location_value = gtk_label_new(current_location);
+    gtk_box_pack_start(GTK_BOX(box), lbl_location_value, FALSE, FALSE, 0);
+
+    // -------------------------
+    // ADDRESS
+    // -------------------------
+    gtk_box_pack_start(GTK_BOX(box), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 10);
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("SAVED SHIPPING ADDRESS:"), FALSE, FALSE, 0);
+    lbl_address_value = gtk_label_new(current_address[0] ? current_address : "Not Set");
+    gtk_box_pack_start(GTK_BOX(box), lbl_address_value, FALSE, FALSE, 0);
+
+    // -------------------------
+    // CARD
+    // -------------------------
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("SAVED PAYMENT METHOD:"), FALSE, FALSE, 0);
+    lbl_card_value = gtk_label_new(current_card_info[0] ? current_card_info : "Not Set");
+    gtk_box_pack_start(GTK_BOX(box), lbl_card_value, FALSE, FALSE, 0);
+
+    return box;
+}
+
+
+void update_user_page() {
+    gtk_label_set_text(GTK_LABEL(lbl_user_value), current_username);
+    gtk_label_set_text(GTK_LABEL(lbl_email_value), current_email);
+    gtk_label_set_text(GTK_LABEL(lbl_phone_value), current_phone);
+    gtk_label_set_text(GTK_LABEL(lbl_location_value), current_location);
+    gtk_label_set_text(GTK_LABEL(lbl_address_value), current_address[0] ? current_address : "Not Set");
+    gtk_label_set_text(GTK_LABEL(lbl_card_value), current_card_info[0] ? current_card_info : "Not Set");
+}
+
+
+
+
 // AUTH HELPERS
 void update_username_display(const char *name) {
     if (global_lbl_username_display) {
@@ -435,11 +594,19 @@ void on_btn_login_clicked(GtkWidget *widget, gpointer data) {
     AuthWidgets *w = (AuthWidgets*)data;
     const char *user = gtk_entry_get_text(GTK_ENTRY(w->entry_user));
     const char *pass = gtk_entry_get_text(GTK_ENTRY(w->entry_pass));
+    strcpy(current_username, user);
 
     if (validarLogin(user, pass)) {
-        strcpy(current_username, user);
+        //strcpy(current_username, user);
+        
         obtenerDatosUsuarioCompleto(user, current_phone, current_location, current_email, current_address, current_card_info);
+        printf("Usuario registrado: %s\n", current_username);  // <-- Mejor impresión
+        printf("Telefono registrado: %s\n", current_phone);  // <-- Mejor impresión
+        printf("E.mailregistrado: %s\n", current_email);  // <-- Mejor impresión
+        printf("direccion registrada: %s\n", current_address);  // <-- Mejor impresión
+        printf("card registrado: %s\n", current_card_info);  // <-- Mejor impresión
         update_username_display(user); 
+        update_user_page();
 
         if (w->navbar_auth_area) gtk_stack_set_visible_child_name(GTK_STACK(w->navbar_auth_area), "view_logged");
         gtk_stack_set_visible_child_name(GTK_STACK(w->stack), "page_novedades");
@@ -467,8 +634,14 @@ void on_btn_do_register_clicked(GtkWidget *widget, gpointer data) {
 
     char errorMsg[200];
     if (registrarUsuario(user, pass, phone, location, email, errorMsg)) {
+        // ✔ GUARDAR usuario actual
+        strcpy(current_username, user);
+        printf("Usuario registrado: %s\n", current_username);  // <-- Mejor impresión
         mostrar_alerta(w->window, "Account Created. Please Sign In.");
-        gtk_stack_set_visible_child_name(GTK_STACK(w->stack), "page_login");
+        update_user_page();
+        
+        obtenerDatosUsuarioCompleto(user, current_phone, current_location, current_email, current_address, current_card_info);
+        gtk_stack_set_visible_child_name(GTK_STACK(w->stack), "page_user");
     } else {
         mostrar_alerta(w->window, errorMsg);
     }
@@ -540,6 +713,8 @@ GtkWidget* create_register_page(GtkWidget *stack, GtkWidget *window) {
     w->entry_email = entry_email; w->entry_phone = entry_phone; w->combo_location = combo_states;
     w->stack = stack; w->window = window;
     g_signal_connect(btn_reg, "clicked", G_CALLBACK(on_btn_do_register_clicked), w);
+    strcpy(current_username, gtk_entry_get_text(GTK_ENTRY(w->entry_user)));
+    printf("%s", current_username);
     g_signal_connect(btn_back, "clicked", G_CALLBACK(ir_a_login), stack);
     return scroll;
 }
@@ -583,46 +758,6 @@ GtkWidget* create_cart_page(GtkWidget *stack, GtkWidget *window) {
     return box;
 }
 
-// USER PAGE - ACTUALIZADA CON DATOS REALES
-GtkWidget* create_user_page(GtkWidget *window, GtkWidget *navbar_auth_area, GtkWidget *stack) {
-    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
-    gtk_widget_set_halign(box, GTK_ALIGN_CENTER); gtk_widget_set_margin_top(box, 30);
-    GtkWidget *lbl_title = gtk_label_new("MY PROFILE"); gtk_style_context_add_class(gtk_widget_get_style_context(lbl_title), "auth-title");
-    gtk_box_pack_start(GTK_BOX(box), lbl_title, FALSE, FALSE, 10);
-
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("Current User:"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(current_username), FALSE, FALSE, 0);
-    
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("Email:"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(current_email), FALSE, FALSE, 0);
-
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("Phone:"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(current_phone), FALSE, FALSE, 0);
-
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("Location (State):"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(current_location), FALSE, FALSE, 0);
-
-    // DATOS PERSISTENTES
-    gtk_box_pack_start(GTK_BOX(box), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 10);
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("SAVED SHIPPING ADDRESS:"), FALSE, FALSE, 0);
-    // Aquí usamos la variable global current_address que se carga al login
-    GtkWidget *lbl_addr = gtk_label_new(current_address[0] ? current_address : "Not Set");
-    gtk_box_pack_start(GTK_BOX(box), lbl_addr, FALSE, FALSE, 0);
-
-    gtk_box_pack_start(GTK_BOX(box), gtk_label_new("SAVED PAYMENT METHOD:"), FALSE, FALSE, 0);
-    // Variable global current_card_info
-    GtkWidget *lbl_card = gtk_label_new(current_card_info[0] ? current_card_info : "Not Set");
-    gtk_box_pack_start(GTK_BOX(box), lbl_card, FALSE, FALSE, 0);
-
-    // Botón Eliminar
-    gtk_box_pack_start(GTK_BOX(box), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 20);
-    GtkWidget *btn_delete = gtk_button_new_with_label("DELETE ACCOUNT");
-    GtkStyleContext *ctx = gtk_widget_get_style_context(btn_delete); gtk_style_context_add_class(ctx, "boton-lv-danger"); 
-    AuthWidgets *w = g_malloc(sizeof(AuthWidgets)); w->window = window; w->navbar_auth_area = navbar_auth_area; w->stack = stack; w->entry_user = gtk_entry_new(); w->entry_pass = gtk_entry_new();
-    g_signal_connect(btn_delete, "clicked", G_CALLBACK(on_btn_delete_account_clicked), w);
-    gtk_box_pack_start(GTK_BOX(box), btn_delete, FALSE, FALSE, 0);
-    return box;
-}
 
 // ====================================================================
 // FUNCIONES RESTAURADAS Y UI HELPERS (Sin cambios)
@@ -647,10 +782,10 @@ GtkWidget* create_cell(Prenda *prenda, int index) {
 
     char rutaImagen[256];
     snprintf(rutaImagen, sizeof(rutaImagen), "./imagenes/imagenesHombre/imagen_%03d.jpg", index);
-
+    strcpy(prenda->urlImagen, rutaImagen);
     GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_scale(prenda->urlImagen ? prenda->urlImagen : rutaImagen, 120, 120, TRUE, NULL);
     if (!pixbuf) {
-        pixbuf = gdk_pixbuf_new_from_file_at_scale("./imagenes/default.jpg", 120, 120, TRUE, NULL);
+        pixbuf = gdk_pixbuf_new_from_file_at_scale("p.jpg", 120, 120, TRUE, NULL);
     }
 
     GtkWidget *img = gtk_image_new_from_pixbuf(pixbuf);
@@ -699,6 +834,7 @@ GtkWidget* create_scrolleable_grid_prendas(ListaRopa *lista, int columnas) {
             r++;
         }
     }
+    //imprimirListaRopa(lista);
     return scroll;
 }
 
@@ -732,7 +868,7 @@ GtkWidget *create_icon_nav_button(GtkStack *stack, const gchar *icon_name, const
 
 // Helper para Carrusel
 typedef struct { GtkStack *stack; const gchar **names; gint count; } CarouselData;
-const gchar *IMAGE_PATHS[] = { "./imagenes/imagenesCarrusel/chamarra.jpg", "./imagenes/imagenesCarrusel/jerseyAmericano.jpg", "./imagenes/imagenesCarrusel/chamarraMezclilla.jpg", "./imagenes/imagenesCarrusel/sudaderaCafe.jpg" };
+const gchar *IMAGE_PATHS[] = { "./imagenesCarrusel/chamarra.jpg", "./imagenesCarrusel/jerseyAmericano.jpg", "./imagenesCarrusel/chamarraMezclilla.jpg", "./imagenesCarrusel/sudaderaCafe.jpg" };
 const gchar *IMAGE_NAMES[] = { "img_1", "img_2", "img_3", "img_4" };
 
 // ====================================================================
@@ -808,6 +944,7 @@ static void activate (GtkApplication* app, gpointer user_data) {
     if (descargarCSV("https://docs.google.com/spreadsheets/d/e/2PACX-1vTQuF8mUFi66yyufmwTLU2bx4bwlUA_XAOLuxh2xIkx50a7uGZsFFRDN8Opn7-B32MeNdKkJRsqRsjb/pub?output=csv", "ropa.csv")) {
         cargarDesdeCSV("ropa.csv", lista);
     }
+    
 
     GtkWidget *window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(window), "LV STORE");
@@ -878,31 +1015,61 @@ static void activate (GtkApplication* app, gpointer user_data) {
     // NUEVA: Página de Checkout
     gtk_stack_add_named(GTK_STACK(stack), create_checkout_page(stack, window), "page_checkout");
     
-    // Tienda Pages - CARRUSEL ACTUALIZADO
     GtkWidget *gridCarrusel = gtk_grid_new();
     gtk_widget_add_events(gridCarrusel, GDK_SCROLL_MASK);
-    
+    gtk_widget_set_hexpand(gridCarrusel, TRUE);
+    gtk_widget_set_vexpand(gridCarrusel, TRUE);
+
     GtkWidget *stackImgs = gtk_stack_new();
+
+    // ← centrado del stack
+    gtk_widget_set_halign(stackImgs, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(stackImgs, GTK_ALIGN_CENTER);
+    gtk_widget_set_hexpand(stackImgs, TRUE);
+    gtk_widget_set_vexpand(stackImgs, TRUE);
+
     CarouselData *cdata = g_new(CarouselData, 1);
     for(int i=0;i<4;i++) {
         GtkWidget *ic = gtk_box_new(GTK_ORIENTATION_VERTICAL,0);
-        GdkPixbuf *pb = gdk_pixbuf_new_from_file_at_scale(IMAGE_PATHS[i], 600, 600, FALSE, NULL);
-        gtk_container_add(GTK_CONTAINER(ic), pb?gtk_image_new_from_pixbuf(pb):gtk_label_new(IMAGE_NAMES[i]));
+        GdkPixbuf *pb = gdk_pixbuf_new_from_file_at_scale(
+            IMAGE_PATHS[i], 600, 600, FALSE, NULL
+        );
+        gtk_container_add(GTK_CONTAINER(ic),
+            pb ? gtk_image_new_from_pixbuf(pb)
+            : gtk_label_new(IMAGE_NAMES[i])
+        );
+
         gtk_stack_add_titled(GTK_STACK(stackImgs), ic, IMAGE_NAMES[i], IMAGE_NAMES[i]);
     }
+
     cdata->stack = GTK_STACK(stackImgs); 
     cdata->names = IMAGE_NAMES;
     cdata->count = 4;
 
-    gtk_grid_attach(GTK_GRID(gridCarrusel), stackImgs, 1,0,1,1);
-    GtkWidget *b1=gtk_button_new_with_label("<"), *b2=gtk_button_new_with_label(">");
-    g_signal_connect(b1,"clicked",G_CALLBACK(on_carrusel_button_clicked),cdata);
-    g_signal_connect(b2,"clicked",G_CALLBACK(on_carrusel_button_clicked),cdata);
+    // botones
+    GtkWidget *b1 = gtk_button_new_with_label("<");
+    GtkWidget *b2 = gtk_button_new_with_label(">");
+
+    g_signal_connect(b1, "clicked", G_CALLBACK(on_carrusel_button_clicked), cdata);
+    g_signal_connect(b2, "clicked", G_CALLBACK(on_carrusel_button_clicked), cdata);
     g_signal_connect(gridCarrusel, "scroll-event", G_CALLBACK(on_carrusel_scroll), cdata);
 
-    gtk_grid_attach(GTK_GRID(gridCarrusel), b1,0,0,1,1); gtk_grid_attach(GTK_GRID(gridCarrusel), b2,2,0,1,1);
+    // evitar que los botones estiren el grid
+    gtk_widget_set_halign(b1, GTK_ALIGN_START);
+    gtk_widget_set_valign(b1, GTK_ALIGN_CENTER);
+    gtk_widget_set_hexpand(b1, FALSE);
+
+    gtk_widget_set_halign(b2, GTK_ALIGN_END);
+    gtk_widget_set_valign(b2, GTK_ALIGN_CENTER);
+    gtk_widget_set_hexpand(b2, FALSE);
+
+    // agregar al grid
+    gtk_grid_attach(GTK_GRID(gridCarrusel), b1,       0, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(gridCarrusel), stackImgs,1, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(gridCarrusel), b2,       2, 0, 1, 1);
 
     gtk_stack_add_named(GTK_STACK(stack), gridCarrusel, "page_novedades");
+
     gtk_stack_add_named(GTK_STACK(stack), create_scrolleable_grid_prendas(lista, 3), "page_mujer_camisas");
     gtk_stack_add_named(GTK_STACK(stack), create_content_label("HOMBRE SECTION", "hombre"), "page_hombre_pantalones");
 
