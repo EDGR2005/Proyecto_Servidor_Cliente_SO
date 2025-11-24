@@ -1,0 +1,195 @@
+/* ----------------------------------------------------- */
+/* ** TEMA GLOBAL "CLEAN WHITE" (ESTILO EDITORIAL) ** */
+/* ----------------------------------------------------- */
+
+window {
+    background-color: #FFFFFF; 
+    color: #000000; 
+    font-family: "Helvetica Neue", "Arial", sans-serif; 
+}
+
+/* ----------------------------------------------------- */
+/* ** ESTILOS DE CARRITO Y PERFIL ** */
+/* ----------------------------------------------------- */
+
+.cart-item-row {
+    background-color: #FAFAFA;
+    border-bottom: 1px solid #EEEEEE;
+    padding: 10px;
+    margin-bottom: 5px;
+}
+
+.cart-total {
+    font-size: 18px;
+    font-weight: bold;
+    color: #000000;
+    margin-top: 15px;
+    margin-bottom: 15px;
+    letter-spacing: 1px;
+}
+
+.auth-entry {
+    background-color: transparent;
+    color: #000000;
+    border: none;
+    border-bottom: 1px solid #CCCCCC;
+    border-radius: 0px;
+    padding: 8px 0px;
+    margin-bottom: 20px;
+    font-size: 14px;
+}
+.auth-entry:focus {
+    border-bottom: 1px solid #BCAAA4; /* Color acento al enfocar */
+}
+
+/* Selector de Ubicación HÍBRIDO */
+.auth-combo-hybrid {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.auth-combo-hybrid button {
+    background-color: transparent;
+    color: #000000;
+    border: none;
+    border-bottom: 1px solid #CCCCCC; 
+    border-radius: 0px;
+    padding: 8px 0px;
+    box-shadow: none;
+}
+
+.auth-combo-hybrid button:hover, .auth-combo-hybrid button:active {
+    background-color: #FAFAFA;
+    border-bottom: 1px solid #8D6E63;
+}
+
+/* ----------------------------------------------------- */
+/* ** ESTILOS DE AUTENTICACIÓN (LOGIN/REGISTRO) ** */
+/* ----------------------------------------------------- */
+
+.auth-card {
+    background-color: #FFFFFF; 
+    padding: 50px;
+    border: none; 
+    box-shadow: none; 
+    /* Borde superior en dorado/marrón */
+    border-top: 4px solid #8D6E63; 
+}
+
+.auth-title {
+    color: #000000;
+    font-family: "Futura", "Century Gothic", sans-serif; 
+    font-size: 28px;
+    font-weight: bold;
+    letter-spacing: 4px; 
+    margin-bottom: 10px;
+}
+
+.auth-subtitle {
+    color: #5D4037; /* Marrón oscuro */
+    font-family: "Times New Roman", "Georgia", serif; 
+    font-style: italic;
+    font-size: 18px;
+    margin-bottom: 40px;
+}
+
+entry.auth-entry placeholder {
+    color: #888888;
+    font-size: 12px;
+    letter-spacing: 1px;
+}
+
+/* --- CAMBIO PRINCIPAL: BOTONES MÁS VISUALES --- */
+.boton-lv-primary {
+    /* Color Dorado/Marrón (Camel) estilo cuero LV */
+    background-color: #9E7E52; 
+    color: #FFFFFF; 
+    border: none;
+    border-radius: 0px; 
+    padding: 15px;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+}
+
+.boton-lv-primary:hover {
+    /* Un tono más oscuro al pasar el mouse */
+    background-color: #6D4C41; 
+    color: #FFFFFF;
+}
+
+.boton-lv-text {
+    background: transparent;
+    color: #8D6E63; /* Texto marrón suave */
+    border: none;
+    box-shadow: none;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-decoration: none;
+    margin-top: 10px;
+}
+
+.boton-lv-text:hover {
+    color: #5D4037;
+    text-decoration: underline;
+}
+
+/* Botón de peligro (Eliminar cuenta) */
+.boton-lv-danger {
+    background-color: #C62828; /* Rojo vibrante */
+    color: #FFFFFF; 
+    border: none;
+    border-radius: 0px; 
+    padding: 15px;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    transition: all 0.3s ease;
+}
+
+.boton-lv-danger:hover {
+    background-color: #B71C1C; 
+    color: #FFFFFF;
+}
+
+/* ----------------------------------------------------- */
+/* ** RESTO DE LA TIENDA ** */
+/* ----------------------------------------------------- */
+
+.navbar {
+    background-color: #FFFFFF;
+    padding: 20px 0;
+    border-bottom: 1px solid #EAEAEA; 
+}
+
+.nav-button, .menu-nav-button {
+    color: #3E2723; /* Texto casi negro (marrón muy oscuro) */
+    background: transparent;
+    font-size: 13px;
+    font-weight: normal;
+    letter-spacing: 1px;
+    padding: 10px 15px;
+    border: none;
+}
+
+.nav-button:hover, .menu-nav-button:hover {
+    background-color: transparent;
+    color: #9E7E52; /* Dorado al hacer hover */
+    font-weight: bold;
+}
+
+#carrusel-principal {
+    background-color: #FFFFFF;
+    border: none; 
+}
+
+label {
+    color: #000000;
+}
+
+label {
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
