@@ -193,3 +193,19 @@ label {
     font-size: 12px;
     letter-spacing: 0.5px;
 }
+
+.dialog-producto {
+    background-color: #fff3f3;   /* gris oscuro */
+    border-radius: 12px;
+}
+
+.dialog-producto label {
+    color: rgb(0, 0, 0);
+}
+
+.dialog-producto button {
+    background-color: #ff0066;
+    color: white;
+    border-radius: 8px;
+    padding: 8px 12px;
+}

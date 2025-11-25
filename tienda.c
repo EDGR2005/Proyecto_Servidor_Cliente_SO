@@ -9,6 +9,9 @@
 #include "auth.h"
 #include<stdio.h>
 
+
+Prenda *prendaActual;
+
 // ====================================================================
 // VARIABLES GLOBALES DE ESTADO
 // ====================================================================
@@ -441,12 +444,109 @@ gtk_box_pack_start(GTK_BOX(col_summary), global_box_checkout_items, FALSE, FALSE
 // FUNCIONES HELPERS Y AUTH
 // ====================================================================
 
+
+
+
+void on_add_prenda_info(GtkButton *btn, gpointer data) {
+    Prenda *p = (Prenda*)data;
+
+    // Lógica existente para agregar al carrito
+    agregar_al_carrito_logic(p);
+
+    // Mostrar alerta
+    GtkWidget *toplevel = gtk_widget_get_toplevel(GTK_WIDGET(btn));
+    mostrar_alerta(GTK_WINDOW(toplevel), "ITEM ADDED TO BAG");
+}
+
+void mostrar_info_prenda(GtkWindow *parent, Prenda *p) {
+    GtkWidget *dialog = gtk_dialog_new_with_buttons(
+        p->nombre,
+        parent,
+        GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+        NULL     // 🔥 sin botones
+    );
+
+
+    
+    // 🔥 AQUÍ MODIFICAS EL TAMAÑO
+gtk_window_set_default_size(GTK_WINDOW(dialog), 450, 600);
+
+    // 🔥 Agregar una clase CSS personalizada
+    gtk_style_context_add_class(gtk_widget_get_style_context(dialog), "dialog-producto");
+
+    GtkWidget *content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+
+    GtkWidget *box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+    gtk_container_add(GTK_CONTAINER(content), box);
+
+    // ===========================
+    //   Imagen
+    // ===========================
+    GError *error = NULL;
+    GdkPixbuf *pix = gdk_pixbuf_new_from_file_at_scale(
+        p->urlImagen,
+        300, 300,
+        TRUE,
+        &error
+    );
+
+    if (!pix) {
+        g_printerr("Error cargando imagen: %s\n", error->message);
+        pix = gdk_pixbuf_new_from_file_at_scale("p.jpg", 300, 300, TRUE, NULL);
+    }
+
+    GtkWidget *img = gtk_image_new_from_pixbuf(pix);
+    gtk_box_pack_start(GTK_BOX(box), img, FALSE, FALSE, 0);
+
+    // ===========================
+    //   Datos de texto
+    // ===========================
+    char buffer[512];
+
+    snprintf(buffer, sizeof(buffer), "Brand: %s", p->marca);
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(buffer), FALSE, FALSE, 0);
+
+    snprintf(buffer, sizeof(buffer), "Name: %s", p->nombre);
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(buffer), FALSE, FALSE, 0);
+
+    snprintf(buffer, sizeof(buffer), "Price: %.2f %s", p->precio, p->moneda);
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(buffer), FALSE, FALSE, 0);
+
+    snprintf(buffer, sizeof(buffer), "Gender: %s", p->genero);
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(buffer), FALSE, FALSE, 0);
+
+    snprintf(buffer, sizeof(buffer), "Category: %s", p->categoria);
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(buffer), FALSE, FALSE, 0);
+
+    snprintf(buffer, sizeof(buffer), "Collection: %s", p->coleccion);
+    gtk_box_pack_start(GTK_BOX(box), gtk_label_new(buffer), FALSE, FALSE, 0);
+
+    // ===========================
+    //   Botón "Add to Bag"
+    // ===========================
+    GtkWidget *btn_add = gtk_button_new_with_label("ADD TO BAG");
+    gtk_box_pack_start(GTK_BOX(box), btn_add, FALSE, FALSE, 10);
+
+    // Handler del botón
+    g_signal_connect(btn_add, "clicked", G_CALLBACK(on_add_prenda_info), p);
+
+    gtk_widget_show_all(dialog);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+}
+
+
+
 void on_cell_clicked(GtkWidget *widget, GdkEventButton *event, gpointer data) {
     Prenda *p = (Prenda*)data;
-    agregar_al_carrito_logic(p);
+
     GtkWidget *toplevel = gtk_widget_get_toplevel(widget);
-    if (gtk_widget_is_toplevel(toplevel)) mostrar_alerta(toplevel, "ITEM ADDED TO BAG");
+    if (!gtk_widget_is_toplevel(toplevel)) return;
+
+    // Mostrar la ventana emergente con info de la prenda
+    mostrar_info_prenda(GTK_WINDOW(toplevel), p);
 }
+
 
 void refrescar_vista_carrito() {
     if (!global_box_items_carrito) return;
@@ -571,6 +671,16 @@ GtkWidget* create_user_page(GtkWidget *window, GtkWidget *navbar_auth_area, GtkW
     gtk_box_pack_start(GTK_BOX(box), gtk_label_new("SAVED PAYMENT METHOD:"), FALSE, FALSE, 0);
     lbl_card_value = gtk_label_new(current_card_info[0] ? current_card_info : "Not Set");
     gtk_box_pack_start(GTK_BOX(box), lbl_card_value, FALSE, FALSE, 0);
+
+// Botón Eliminar
+    gtk_box_pack_start(GTK_BOX(box), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 20);
+    GtkWidget *btn_delete = gtk_button_new_with_label("DELETE ACCOUNT");
+    GtkStyleContext *ctx = gtk_widget_get_style_context(btn_delete); gtk_style_context_add_class(ctx, "boton-lv-danger"); 
+    AuthWidgets *w = g_malloc(sizeof(AuthWidgets)); w->window = window; w->navbar_auth_area = navbar_auth_area; w->stack = stack; w->entry_user = gtk_entry_new(); w->entry_pass = gtk_entry_new();
+    g_signal_connect(btn_delete, "clicked", G_CALLBACK(on_btn_delete_account_clicked), w);
+    gtk_box_pack_start(GTK_BOX(box), btn_delete, FALSE, FALSE, 0);
+
+    
 
     return box;
 }
