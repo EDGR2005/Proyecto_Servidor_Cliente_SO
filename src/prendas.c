@@ -33,3 +33,25 @@ Prenda* crearPrenda(const char *id,
 
     return p;
 }
+
+char* obtenerInfoPrenda(Prenda *p) {
+    if (!p) return NULL;
+
+    // Calculamos un tamaño suficiente para almacenar toda la info
+    size_t tamaño = 1024; // Ajusta si es necesario
+    char *info = (char*) malloc(tamaño);
+    if (!info) return NULL;
+
+    snprintf(info, tamaño,
+             "ID: %s\nMarca: %s\nNombre: %s\nPrecio: %.2f %s \nGenero: %s\nCategoria: %s\nColeccion: %s",
+             p->id,
+             p->marca,
+             p->nombre,
+             p->precio,
+             p->moneda,
+             p->genero,
+             p->categoria,
+             p->coleccion);
+
+    return info;
+}

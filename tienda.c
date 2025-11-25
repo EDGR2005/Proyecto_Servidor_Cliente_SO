@@ -9,6 +9,45 @@
 #include "auth.h"
 #include<stdio.h>
 
+#include <arpa/inet.h>
+#include <unistd.h>
+
+char* enviar_comando_servidor(const char *server_ip, const char *comando) {
+    int sock = 0;
+    struct sockaddr_in serv_addr;
+    char buffer[1024] = {0};
+
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        printf("Error: No se pudo crear socket\n");
+        return NULL;
+    }
+
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(8080);
+
+    if (inet_pton(AF_INET, server_ip, &serv_addr.sin_addr) <= 0) {
+        printf("Dirección inválida\n");
+        close(sock);
+        return NULL;
+    }
+
+    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+        printf("No se pudo conectar al servidor\n");
+        close(sock);
+        return NULL;
+    }
+
+    // Enviar el comando
+    send(sock, comando, strlen(comando), 0);
+
+    // Leer la respuesta
+    int valread = read(sock, buffer, 1024);
+    close(sock);
+
+    char *respuesta = malloc(strlen(buffer) + 1);
+    strcpy(respuesta, buffer);
+    return respuesta;
+}
 
 Prenda *prendaActual;
 
@@ -79,6 +118,20 @@ void agregar_al_carrito_logic(Prenda *p) {
     nuevo->prenda = p; 
     nuevo->siguiente = carrito_global;
     carrito_global = nuevo;
+
+    char *info = obtenerInfoPrenda(p); // 1️⃣ Guardamos en variable temporal
+    if (!info) return;                  // 2️⃣ Verificamos que malloc no falló
+
+    char comando[1200];
+    sprintf(comando, "ACTION SE_AGREGO_AL_CARRITO_DE:  %s la prenda %s", current_username, info); // 3️⃣ Usamos info
+
+    char *respuesta = enviar_comando_servidor("192.168.1.135", comando);
+    if (respuesta) {
+        printf("RESPUESTA DEL SERVIDOR: %s\n", respuesta);
+        free(respuesta);
+    }
+
+    free(info); // 4️⃣ Liberamos memoria
 }
 
 double calcular_total_carrito() {
@@ -120,6 +173,8 @@ void on_btn_place_order_clicked(GtkWidget *widget, gpointer data) {
     const char *card = gtk_entry_get_text(GTK_ENTRY(w->entry_card_num));
     const char *type = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(w->combo_card_type));
 
+   
+
     if (strlen(addr) < 5 || strlen(card) < 4) {
         mostrar_alerta(w->window, "Please fill in valid shipping and payment details.");
         if(type) g_free((gpointer)type);
@@ -138,6 +193,17 @@ void on_btn_place_order_clicked(GtkWidget *widget, gpointer data) {
     strcpy(current_address, full_address);
     strcpy(current_card_info, saved_card);
     actualizarDatosUsuario(current_username, current_address, current_card_info);
+
+    char comando[500];
+    sprintf(comando, "UPDATE_PAY %s|%s|%s", 
+            current_username, 
+            current_address, current_card_info);
+
+    char *respuesta = enviar_comando_servidor("192.168.1.135", comando);
+    if (respuesta) {
+        printf("RESPUESTA DEL SERVIDOR: %s\n", respuesta);
+        free(respuesta);
+    }
 
     mostrar_alerta(w->window, "ORDER CONFIRMED!\nThank you for shopping with Louis Vuitton.\nA confirmation email has been sent.");
     
@@ -159,8 +225,20 @@ void realizar_borrado(GtkWidget *dialog, gint response_id, gpointer user_data) {
         const char *pass = gtk_entry_get_text(GTK_ENTRY(entry_pass));
         
         if (eliminarUsuario(current_username, pass)) {
+            //mANDAMOS peticion a servidor
+            char comando[300];
+            sprintf(comando, "DELETE %s,%s", 
+                    current_username, pass);
+
+            char *respuesta = enviar_comando_servidor("192.168.1.135", comando);
+            if (respuesta) {
+                printf("RESPUESTA DEL SERVIDOR: %s\n", respuesta);
+                free(respuesta);
+            }
             gtk_widget_destroy(dialog);
             mostrar_alerta(w->window, "Account deleted successfully. Goodbye.");
+            
+
             cerrar_sesion(NULL, w);
         } else {
             mostrar_alerta(w->window, "Incorrect password. Deletion failed.");
@@ -179,6 +257,8 @@ void on_btn_delete_account_clicked(GtkWidget *widget, gpointer data) {
                                                     "Cancel", GTK_RESPONSE_REJECT,
                                                     "DELETE", GTK_RESPONSE_ACCEPT,
                                                     NULL);
+
+    
 
     GtkWidget *content_area = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
     GtkWidget *label = gtk_label_new("Enter your password to confirm account deletion.\nThis action cannot be undone.");
@@ -540,12 +620,29 @@ gtk_window_set_default_size(GTK_WINDOW(dialog), 450, 600);
 void on_cell_clicked(GtkWidget *widget, GdkEventButton *event, gpointer data) {
     Prenda *p = (Prenda*)data;
 
+   
+    char *info = obtenerInfoPrenda(p); // 1️⃣ Guardamos en variable temporal
+    if (!info) return;                  // 2️⃣ Verificamos que malloc no falló
+
+    char comando[1200];
+    sprintf(comando, "ACTION CLICK %s", info); // 3️⃣ Usamos info
+
+    char *respuesta = enviar_comando_servidor("192.168.1.135", comando);
+    if (respuesta) {
+        printf("RESPUESTA DEL SERVIDOR: %s\n", respuesta);
+        free(respuesta);
+    }
+
+    free(info); // 4️⃣ Liberamos memoria
+
+
     GtkWidget *toplevel = gtk_widget_get_toplevel(widget);
     if (!gtk_widget_is_toplevel(toplevel)) return;
 
     // Mostrar la ventana emergente con info de la prenda
     mostrar_info_prenda(GTK_WINDOW(toplevel), p);
 }
+
 
 
 void refrescar_vista_carrito() {
@@ -715,7 +812,18 @@ void ir_a_login(GtkWidget *widget, gpointer stack) { gtk_stack_set_visible_child
 void cerrar_sesion(GtkWidget *widget, gpointer data) {
     AuthWidgets *w = (AuthWidgets*)data;
     if (w->navbar_auth_area) gtk_stack_set_visible_child_name(GTK_STACK(w->navbar_auth_area), "view_guest");
+   
+   
     
+    char comando[1200];
+    sprintf(comando, "ACTION LOG OUT de %s", current_username); // 3️⃣ Usamos info
+
+    char *respuesta = enviar_comando_servidor("192.168.1.135", comando);
+    if (respuesta) {
+        printf("RESPUESTA DEL SERVIDOR: %s\n", respuesta);
+        free(respuesta);
+    }
+
     strcpy(current_username, "INVITADO");
     strcpy(current_phone, "");
     strcpy(current_location, ""); 
@@ -724,6 +832,8 @@ void cerrar_sesion(GtkWidget *widget, gpointer data) {
     strcpy(current_card_info, "");
     
     update_username_display("INVITADO");
+
+    
     
     if(w->entry_user) gtk_entry_set_text(GTK_ENTRY(w->entry_user), "");
     if(w->entry_pass) gtk_entry_set_text(GTK_ENTRY(w->entry_pass), "");
@@ -737,14 +847,24 @@ void on_btn_login_clicked(GtkWidget *widget, gpointer data) {
     const char *pass = gtk_entry_get_text(GTK_ENTRY(w->entry_pass));
     strcpy(current_username, user);
 
+
+    char comando[200];
+    sprintf(comando, "LOGIN %s,%s", user, pass);
+
+    char *respuesta = enviar_comando_servidor("192.168.1.135", comando);
+    if (respuesta) {
+        printf("RESPUESTA DEL SERVIDOR: %s\n", respuesta);
+        free(respuesta);
+    }
+
     if (validarLogin(user, pass)) {
         //strcpy(current_username, user);
         
         obtenerDatosUsuarioCompleto(user, current_phone, current_location, current_email, current_address, current_card_info);
-        printf("Usuario registrado: %s\n", current_username);  // <-- Mejor impresión
-        printf("Telefono registrado: %s\n", current_phone);  // <-- Mejor impresión
-        printf("E.mailregistrado: %s\n", current_email);  // <-- Mejor impresión
-        printf("direccion registrada: %s\n", current_address);  // <-- Mejor impresión
+        // printf("Usuario registrado: %s\n", current_username);  // <-- Mejor impresión
+        // printf("Telefono registrado: %s\n", current_phone);  // <-- Mejor impresión
+        // printf("E.mailregistrado: %s\n", current_email);  // <-- Mejor impresión
+        // printf("direccion registrada: %s\n", current_address);  // <-- Mejor impresión
         //printf("card registrado: %s\n", current_card_info);  // <-- Mejor impresión
         update_username_display(user); 
         update_user_page();
@@ -777,12 +897,28 @@ void on_btn_do_register_clicked(GtkWidget *widget, gpointer data) {
     if (registrarUsuario(user, pass, phone, location, email, errorMsg)) {
         // ✔ GUARDAR usuario actual
         strcpy(current_username, user);
-        printf("Usuario registrado: %s\n", current_username);  // <-- Mejor impresión
+        //printf("Usuario registrado: %s\n", current_username);  // <-- Mejor impresión
+        
+        char comando[300];
+        sprintf(comando, "REGISTER %s,%s,%s,%s,%s", 
+                user, 
+                pass, 
+                phone, 
+                location, 
+                email);
+
+        char *respuesta = enviar_comando_servidor("192.168.1.135", comando);
+        if (respuesta) {
+            printf("RESPUESTA DEL SERVIDOR: %s\n", respuesta);
+            free(respuesta);
+        }
+
+
         mostrar_alerta(w->window, "Account Created. Please Sign In.");
         update_user_page();
         
         obtenerDatosUsuarioCompleto(user, current_phone, current_location, current_email, current_address, current_card_info);
-        gtk_stack_set_visible_child_name(GTK_STACK(w->stack), "page_user");
+        gtk_stack_set_visible_child_name(GTK_STACK(w->stack), "page_login");
     } else {
         mostrar_alerta(w->window, errorMsg);
     }
@@ -1090,12 +1226,15 @@ void cargar_css(void) {
 
 static void activate (GtkApplication* app, gpointer user_data) {
     cargar_css();
-    ListaRopa *lista = crearListaRopa();
+    ListaRopa *listaHombre = crearListaRopa();
     //if (descargarCSV("https://docs.google.com/spreadsheets/d/e/2PACX-1vTQuF8mUFi66yyufmwTLU2bx4bwlUA_XAOLuxh2xIkx50a7uGZsFFRDN8Opn7-B32MeNdKkJRsqRsjb/pub?output=csv", "ropa.csv")) {
-        cargarDesdeCSV("ropa.csv", lista);
+        cargarDesdeCSV("ropa.csv", listaHombre);
     //}
     
-
+    ListaRopa *listaMujer= crearListaRopa();
+    //descargarCSV("https://docs.google.com/spreadsheets/d/e/2PACX-1vQGEkkl5KC9eyaQmJu_y9Na3ixrE4OIUPBl0BEVvxJ7cfUItvCsyJ8QgjvY37saczhggXuITFW5w0Sm/pub?output=csv", "ropaM.csv");
+    cargarDesdeCSV("ropaM.csv", listaMujer);
+    
     GtkWidget *window = gtk_application_window_new(app);
     gtk_window_set_title(GTK_WINDOW(window), "LV STORE");
     gtk_window_set_default_size(GTK_WINDOW(window), 1000, 800);
@@ -1222,8 +1361,8 @@ static void activate (GtkApplication* app, gpointer user_data) {
 
 
     
-    gtk_stack_add_named(GTK_STACK(stack),create_content_label("MUJER SECTION", "mujer") , "page_mujer");
-    gtk_stack_add_named(GTK_STACK(stack), create_scrolleable_grid_prendas(lista, 3) , "page_hombre");
+    gtk_stack_add_named(GTK_STACK(stack),create_scrolleable_grid_prendas(listaMujer, 3) , "page_mujer");
+    gtk_stack_add_named(GTK_STACK(stack), create_scrolleable_grid_prendas(listaHombre, 3) , "page_hombre");
 
     gtk_widget_show_all(window);
     gtk_stack_set_visible_child_name(GTK_STACK(stack), "page_novedades");

@@ -20,4 +20,6 @@ typedef struct Prenda {
 Prenda* crearPrenda(const char *id, const char *marca, const char *nombre, float precio, const char *moneda,
                     const char *urlImagen, const char *genero, const char * categoria, const char *coleccion);
 
+                    char* obtenerInfoPrenda(Prenda *p);
+
 #endif
