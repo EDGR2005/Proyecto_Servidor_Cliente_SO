@@ -7,6 +7,7 @@
 #include <curl/curl.h>
 #include "listaRopa.h"
 #include "auth.h"
+#include<stdio.h>
 
 // ====================================================================
 // VARIABLES GLOBALES DE ESTADO
@@ -197,13 +198,19 @@ GtkWidget *global_box_checkout_items = NULL;
 GtkWidget *lbl_total_pay;
 GtkWidget *lbl_total_checkout = NULL;  // Label que mostrará el total en checkout
 
+GtkWidget *entry_address;
+GtkWidget *entry_postal;
+GtkWidget *entry_card;
+GtkWidget *box_card_meta; 
+GtkWidget *entry_exp;
+GtkWidget *entry_cvv;
 
 void actualizar_checkout() {
     // Limpia el contenedor
     gtk_container_foreach(GTK_CONTAINER(global_box_checkout_items), (GtkCallback)gtk_widget_destroy, NULL);
 
     NodoCarrito *nodo = carrito_global;
-
+    double total =0.0;
     while (nodo != NULL) {
 
         // Caja horizontal para cada item
@@ -230,6 +237,8 @@ void actualizar_checkout() {
 
         gtk_box_pack_start(GTK_BOX(item_box), img, FALSE, FALSE, 0);
 
+
+        
         // NOMBRE + PRECIO
         char buffer[256];
         snprintf(buffer, sizeof(buffer), "%s - $%.2f", nodo->prenda->nombre, nodo->prenda->precio);
@@ -237,12 +246,36 @@ void actualizar_checkout() {
         gtk_box_pack_start(GTK_BOX(item_box), lbl, FALSE, FALSE, 0);
 
         gtk_box_pack_start(GTK_BOX(global_box_checkout_items), item_box, FALSE, FALSE, 5);
-
+        total+=nodo->prenda->precio;
         nodo = nodo->siguiente;
     }
-    
 
     
+printf("%f\n", total);
+    // Actualizamos el label global
+    char total_buffer[50];
+    snprintf(total_buffer, sizeof(total_buffer), "TOTAL TO PAY: $%.2f", total);
+    gtk_label_set_text(GTK_LABEL(lbl_total_pay), total_buffer);
+    gtk_widget_show(lbl_total_pay);                 // asegúrate de mostrar el label
+
+
+
+    //texto default
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry_address), "Escribe tu direccion");
+    //Texto guardado
+    gtk_entry_set_text(GTK_ENTRY(entry_address), current_address);
+    gtk_widget_show(entry_address);
+
+    //texto default
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry_postal), "Escribe tu CP");
+    //Texto guardado
+    gtk_entry_set_text(GTK_ENTRY(entry_postal), current_card_info);
+    gtk_widget_show(entry_postal);
+
+
+    gtk_entry_set_placeholder_text(GTK_ENTRY(entry_card), "Ingresa tu tarjeta"); // Placeholder
+// gtk_entry_set_text(GTK_ENTRY(entry_card), ); // Texto inicial
+//     gtk_widget_show(entry_card);
     
     gtk_widget_show_all(global_box_checkout_items);
 
@@ -269,19 +302,14 @@ void on_btn_pagar_clicked(GtkWidget *widget, gpointer data) {
     } else {
         
         actualizar_checkout();
-        // Actualizar el total
-    if (global_lbl_total_carrito) {
-        double total = calcular_total_carrito();
-        char total_str[100];
-        snprintf(total_str, sizeof(total_str), "ESTIMATED TOTAL: $%.2f", total);
-        gtk_label_set_text(GTK_LABEL(global_lbl_total_carrito), total_str);
-    }
-
+        //refrescar_vista_carrito();
         gtk_stack_set_visible_child_name(GTK_STACK(stack), "page_checkout");
         // IMPORTANTE: LLENAR CON ITEMS DEL CARRITO
     
     }
 }
+
+
 
 GtkWidget* create_checkout_page(GtkWidget *stack, GtkWidget *window) {
     GtkWidget *scroll = gtk_scrolled_window_new(NULL, NULL);
@@ -313,11 +341,11 @@ GtkWidget* create_checkout_page(GtkWidget *stack, GtkWidget *window) {
     gtk_widget_set_halign(lbl_ship, GTK_ALIGN_START);
     gtk_box_pack_start(GTK_BOX(col_form), lbl_ship, FALSE, FALSE, 5);
 
-    GtkWidget *entry_address = gtk_entry_new();
+    entry_address = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(entry_address), "Street Address");
     gtk_style_context_add_class(gtk_widget_get_style_context(entry_address), "auth-entry");
     
-    GtkWidget *entry_postal = gtk_entry_new();
+    entry_postal = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(entry_postal), "Postal Code");
     gtk_style_context_add_class(gtk_widget_get_style_context(entry_postal), "auth-entry");
 
@@ -337,16 +365,20 @@ GtkWidget* create_checkout_page(GtkWidget *stack, GtkWidget *window) {
     gtk_combo_box_set_active(GTK_COMBO_BOX(combo_type), 0);
     gtk_style_context_add_class(gtk_widget_get_style_context(combo_type), "auth-combo-hybrid");
     
-    GtkWidget *entry_card = gtk_entry_new();
+   
+
+    entry_card = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(entry_card), "Card Number");
     gtk_style_context_add_class(gtk_widget_get_style_context(entry_card), "auth-entry");
+    
 
-    GtkWidget *box_card_meta = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-    GtkWidget *entry_exp = gtk_entry_new();
+
+    box_card_meta = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+    entry_exp = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(entry_exp), "MM/YY");
     gtk_style_context_add_class(gtk_widget_get_style_context(entry_exp), "auth-entry");
     
-    GtkWidget *entry_cvv = gtk_entry_new();
+    entry_cvv = gtk_entry_new();
     gtk_entry_set_placeholder_text(GTK_ENTRY(entry_cvv), "CVV");
     gtk_style_context_add_class(gtk_widget_get_style_context(entry_cvv), "auth-entry");
     gtk_entry_set_visibility(GTK_ENTRY(entry_cvv), FALSE);
@@ -384,10 +416,9 @@ gtk_box_pack_start(GTK_BOX(col_summary), global_box_checkout_items, FALSE, FALSE
     snprintf(total_str, sizeof(total_str), "TOTAL TO PAY: $%.2f", total);
     lbl_total_pay = gtk_label_new(total_str);
     gtk_style_context_add_class(gtk_widget_get_style_context(lbl_total_pay), "cart-total");
-
-
-    
     gtk_box_pack_start(GTK_BOX(col_summary), lbl_total_pay, FALSE, FALSE, 20);
+
+
 
     GtkWidget *btn_confirm = gtk_button_new_with_label("PLACE ORDER");
     gtk_style_context_add_class(gtk_widget_get_style_context(btn_confirm), "boton-lv-primary");
@@ -604,7 +635,7 @@ void on_btn_login_clicked(GtkWidget *widget, gpointer data) {
         printf("Telefono registrado: %s\n", current_phone);  // <-- Mejor impresión
         printf("E.mailregistrado: %s\n", current_email);  // <-- Mejor impresión
         printf("direccion registrada: %s\n", current_address);  // <-- Mejor impresión
-        printf("card registrado: %s\n", current_card_info);  // <-- Mejor impresión
+        //printf("card registrado: %s\n", current_card_info);  // <-- Mejor impresión
         update_username_display(user); 
         update_user_page();
 
@@ -713,8 +744,7 @@ GtkWidget* create_register_page(GtkWidget *stack, GtkWidget *window) {
     w->entry_email = entry_email; w->entry_phone = entry_phone; w->combo_location = combo_states;
     w->stack = stack; w->window = window;
     g_signal_connect(btn_reg, "clicked", G_CALLBACK(on_btn_do_register_clicked), w);
-    strcpy(current_username, gtk_entry_get_text(GTK_ENTRY(w->entry_user)));
-    printf("%s", current_username);
+    
     g_signal_connect(btn_back, "clicked", G_CALLBACK(ir_a_login), stack);
     return scroll;
 }
@@ -750,7 +780,9 @@ GtkWidget* create_cart_page(GtkWidget *stack, GtkWidget *window) {
     gtk_box_pack_start(GTK_BOX(box), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 10);
     global_lbl_total_carrito = gtk_label_new("TOTAL ESTIMADO: $0.00"); gtk_style_context_add_class(gtk_widget_get_style_context(global_lbl_total_carrito), "cart-total");
     gtk_box_pack_start(GTK_BOX(box), global_lbl_total_carrito, FALSE, FALSE, 10);
-    GtkWidget *btn_pagar = gtk_button_new_with_label("PROCEED TO CHECKOUT"); gtk_style_context_add_class(gtk_widget_get_style_context(btn_pagar), "boton-lv-primary");
+    GtkWidget *btn_pagar = gtk_button_new_with_label("PROCEED TO CHECKOUT"); 
+    gtk_style_context_add_class(gtk_widget_get_style_context(btn_pagar), "boton-lv-primary");
+    
     
     // Pasamos 'stack' para poder redirigir
     g_signal_connect(btn_pagar, "clicked", G_CALLBACK(on_btn_pagar_clicked), stack);
@@ -781,8 +813,16 @@ GtkWidget* create_cell(Prenda *prenda, int index) {
     gtk_container_add(GTK_CONTAINER(event), box);
 
     char rutaImagen[256];
-    snprintf(rutaImagen, sizeof(rutaImagen), "./imagenes/imagenesHombre/imagen_%03d.jpg", index);
-    strcpy(prenda->urlImagen, rutaImagen);
+    if(strcmp("Hombre", prenda->genero) == 0){
+        snprintf(rutaImagen, sizeof(rutaImagen), "./imagenes/imagenesHombre/imagen_%03d.jpg", index);
+        strcpy(prenda->urlImagen, rutaImagen);
+    }else{
+        if(strcmp("Mujer", prenda->genero) == 0){
+            snprintf(rutaImagen, sizeof(rutaImagen), "./imagenes/imagenesMujer/imagen_%03d.jpg", index);
+            strcpy(prenda->urlImagen, rutaImagen);
+        }
+    }
+    
     GdkPixbuf *pixbuf = gdk_pixbuf_new_from_file_at_scale(prenda->urlImagen ? prenda->urlImagen : rutaImagen, 120, 120, TRUE, NULL);
     if (!pixbuf) {
         pixbuf = gdk_pixbuf_new_from_file_at_scale("p.jpg", 120, 120, TRUE, NULL);
@@ -941,9 +981,9 @@ void cargar_css(void) {
 static void activate (GtkApplication* app, gpointer user_data) {
     cargar_css();
     ListaRopa *lista = crearListaRopa();
-    if (descargarCSV("https://docs.google.com/spreadsheets/d/e/2PACX-1vTQuF8mUFi66yyufmwTLU2bx4bwlUA_XAOLuxh2xIkx50a7uGZsFFRDN8Opn7-B32MeNdKkJRsqRsjb/pub?output=csv", "ropa.csv")) {
+    //if (descargarCSV("https://docs.google.com/spreadsheets/d/e/2PACX-1vTQuF8mUFi66yyufmwTLU2bx4bwlUA_XAOLuxh2xIkx50a7uGZsFFRDN8Opn7-B32MeNdKkJRsqRsjb/pub?output=csv", "ropa.csv")) {
         cargarDesdeCSV("ropa.csv", lista);
-    }
+    //}
     
 
     GtkWidget *window = gtk_application_window_new(app);
@@ -968,9 +1008,9 @@ static void activate (GtkApplication* app, gpointer user_data) {
     gtk_stack_set_transition_type(GTK_STACK(navbar_auth_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
 
     // --- CONSTRUCCIÓN NAVBAR ---
-    gtk_box_pack_start(GTK_BOX(navbar_box), create_nav_button(stack, "NOVEDADES", "page_novedades"), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(navbar_box), create_nav_button(stack, "MUJER", "page_mujer_camisas"), FALSE, FALSE, 0); 
-    gtk_box_pack_start(GTK_BOX(navbar_box), create_nav_button(stack, "HOMBRE", "page_hombre_pantalones"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(navbar_box), create_nav_button(stack, "PROXIMAMENTE", "page_novedades"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(navbar_box), create_nav_button(stack, "MUJER", "page_mujer"), FALSE, FALSE, 0); 
+    gtk_box_pack_start(GTK_BOX(navbar_box), create_nav_button(stack, "HOMBRE", "page_hombre"), FALSE, FALSE, 0);
 
     GtkWidget *spacer = gtk_label_new(""); gtk_widget_set_hexpand(spacer, TRUE);
     gtk_box_pack_start(GTK_BOX(navbar_box), spacer, TRUE, TRUE, 0);
@@ -1070,8 +1110,10 @@ static void activate (GtkApplication* app, gpointer user_data) {
 
     gtk_stack_add_named(GTK_STACK(stack), gridCarrusel, "page_novedades");
 
-    gtk_stack_add_named(GTK_STACK(stack), create_scrolleable_grid_prendas(lista, 3), "page_mujer_camisas");
-    gtk_stack_add_named(GTK_STACK(stack), create_content_label("HOMBRE SECTION", "hombre"), "page_hombre_pantalones");
+
+    
+    gtk_stack_add_named(GTK_STACK(stack),create_content_label("MUJER SECTION", "mujer") , "page_mujer");
+    gtk_stack_add_named(GTK_STACK(stack), create_scrolleable_grid_prendas(lista, 3) , "page_hombre");
 
     gtk_widget_show_all(window);
     gtk_stack_set_visible_child_name(GTK_STACK(stack), "page_novedades");
